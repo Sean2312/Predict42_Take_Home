@@ -107,6 +107,8 @@ def clean_cases(cases):
 
     df["handling_minutes"] = pd.to_numeric(df["handling_minutes"]).astype("Int64")
 
+    df["category"] = df["category"].str.strip().str.title()
+
     return df
 
 def load_to_duckdb(cases):
