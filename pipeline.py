@@ -1,5 +1,6 @@
 import argparse
 import time
+from datetime import datetime
 
 import duckdb
 import pandas as pd
@@ -87,8 +88,23 @@ def fetch_cases(token, date):
         offset += limit
     return all_cases
 
+def parse_created_at(value):
+    for date_format in ("%Y-%m-%dT%H:%M:%SZ", "%d.%m.%Y %H:%M"):
+        try:
+            return datetime.strptime(value, date_format)
+        except ValueError:
+            continue
+    raise ValueError(f"Unbekanntes created_at-Format: {value!r}")
+
+def clean_cases(cases):
+    df = pd.DataFrame(cases)
+    df["created_at"] = df["created_at"].apply(parse_created_at)
+    df["last_modified"] = pd.to_datetime(df["last_modified"], format="%Y-%m-%dT%H:%M:%SZ")
+    df["closed_at"] = pd.to_datetime(df["closed_at"], format="%Y-%m-%dT%H:%M:%SZ")
+    return df
+
 def load_to_duckdb(cases):
-    new_df = pd.DataFrame(cases)
+    new_df = clean_cases(cases)
     new_df = new_df.sort_values("last_modified").drop_duplicates("case_id", keep="last")
 
     con = duckdb.connect("cases.duckdb")
@@ -117,7 +133,6 @@ def load_to_duckdb(cases):
         """)
 
     con.close()
-
 
 def main():
     args = parse_args()
