@@ -31,20 +31,33 @@ def get_token():
     return response.json()["access_token"]
 
 def fetch_cases(token, date):
-    response = requests.get(
-        f"{API_URL}/api/cases?",
-        params={
-            "closed_on": date,
-            "offset": 0,
-            "limit": 100
-        },
-        headers={
-            "Authorization": f"Bearer {token}"
-        }
-    )
+    all_cases = []
+    offset = 0
+    limit = 100
 
-    response.raise_for_status()
-    return response.json()["items"]
+    while True: 
+        response = requests.get(
+            f"{API_URL}/api/cases?",
+            params={
+                "closed_on": date,
+                "offset": offset,
+                "limit": limit
+            },
+            headers={
+                "Authorization": f"Bearer {token}"
+            }
+        )
+
+        response.raise_for_status()
+        items = response.json()["items"]
+        print(f"Fetched {len(items)} items.")
+
+        if not items:
+            break
+
+        all_cases.extend(items)
+        offset += limit
+    return all_cases
 
 def load_to_duckdb(cases):
     df = pd.DataFrame(cases)
