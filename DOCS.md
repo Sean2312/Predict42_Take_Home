@@ -59,3 +59,24 @@
 - Wichtige Annahmen/Entscheidungen dokumentieren
 - Was ist an den Daten aufgefallen, welche Unstimmigkeiten sind aufgetreten
 - Dinge, die aus Zeitgründen weggelassen wurden
+
+
+
+## Begutachtung der Daten
+- `store_no` hat führende Nullen also String
+- `created_at` hat zwei verschiedene Formate
+- `priority` kommt als String, lieber Int 
+- `prioroty` kann "" oder `null` sein 
+- `handling_minutes` kommt als String und kann negativ sein 
+- `customer` ist verschachtelt 
+- `comment` unterschiedliche Groß- und Kleinschreibung + whitespace
+- `country` ausgeschrieben, Kürzel in Klein- und Großbuchstaben 
+- `status` kann "Closed" oder "closed" sein, außerdem auch "Resolved"
+- `comment` kann "n/a", `null` oder leer sein + whitespace
+- `comment` kann fehlen! 
+
+
+## Status Codes
+- 401
+- 429
+- 503
