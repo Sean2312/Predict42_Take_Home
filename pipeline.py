@@ -36,10 +36,25 @@ def fetch_cases(token, date):
     response.raise_for_status()
     return response.json()["items"]
 
+def load_to_duckdb(cases):
+    df = pd.DataFrame(cases)
+
+    con = duckdb.connect("cases.duckdb")
+    con.register("cases_df", df)
+
+    con.execute("""
+        CREATE OR REPLACE TABLE cases AS
+        SELECT * FROM cases_df
+    """)
+
+    con.close()
+
+
 
 def main():
     token = get_token()
-    print(fetch_cases(token, "2026-07-28"))
+    cases = fetch_cases(token, "2026-07-28")
+    load_to_duckdb(cases)
 
 if __name__ == "__main__":
     main()
