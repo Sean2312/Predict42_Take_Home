@@ -1,6 +1,6 @@
 import argparse
 import time
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 import duckdb
 import pandas as pd
@@ -17,12 +17,20 @@ BACKOFF_MAX_SECONDS = 30
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--date",
-        required=True
-    )
+    parser.add_argument("--date")
+    parser.add_argument("--date-from")
+    parser.add_argument("--date-to")
+    parser.add_argument("--since")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    modes = [bool(args.date), bool(args.date_from or args.date_to), bool(args.since)]
+    if sum(modes) != 1:
+        parser.error("Choose exactly one of: --date, --date-from/--date-to or --since")
+    if bool(args.date_from) != bool(args.date_to):
+        parser.error("--date-from and --date-to must be provided together")
+
+    return args
 
 def get_token():
     response = requests.post(
@@ -36,12 +44,12 @@ def get_token():
     response.raise_for_status()
     return response.json()["access_token"]
 
-def fetch_page(token, params):
+def fetch_page(token, endpoint, params):
     backoff = BACKOFF_START_SECONDS
 
     for _ in range(MAX_RETRIES):
         response = requests.get(
-            f"{API_URL}/api/cases",
+            f"{API_URL}{endpoint}",
             params=params,
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -68,7 +76,7 @@ def fetch_page(token, params):
 
     raise RuntimeError(f"Giving up after {MAX_RETRIES} retries.")
 
-def fetch_cases(token, date):
+def fetch_paginated(token, endpoint, params):
     all_cases = []
     offset = 0
     limit = 100
@@ -76,7 +84,8 @@ def fetch_cases(token, date):
     while True:
         data, token = fetch_page(
             token,
-            {"closed_on": date, "offset": offset, "limit": limit},
+            endpoint,
+            {**params, "offset": offset, "limit": limit},
         )
         items = data["items"]
         print(f"Fetched {len(items)} items.")
@@ -86,7 +95,13 @@ def fetch_cases(token, date):
 
         all_cases.extend(items)
         offset += limit
-    return all_cases
+    return all_cases, token
+
+def fetch_cases_by_date(token, closed_on):
+    return fetch_paginated(token, "/api/cases", {"closed_on": closed_on})
+
+def fetch_cases_since(token, since):
+    return fetch_paginated(token, "/api/cases/updated", {"since": since})
 
 def parse_created_at(value):
     for date_format in ("%Y-%m-%dT%H:%M:%SZ", "%d.%m.%Y %H:%M"):
@@ -94,7 +109,7 @@ def parse_created_at(value):
             return datetime.strptime(value, date_format)
         except ValueError:
             continue
-    raise ValueError(f"Unbekanntes created_at-Format: {value!r}")
+    raise ValueError(f"Unknown created_at value: {value!r}")
 
 def clean_cases(cases):
     df = pd.DataFrame(cases)
@@ -112,6 +127,9 @@ def clean_cases(cases):
     return df
 
 def load_to_duckdb(cases):
+    if not cases:
+        return
+
     new_df = clean_cases(cases)
     new_df = new_df.sort_values("last_modified").drop_duplicates("case_id", keep="last")
 
@@ -145,10 +163,27 @@ def load_to_duckdb(cases):
 def main():
     args = parse_args()
     token = get_token()
-    cases = fetch_cases(token, args.date)
-    load_to_duckdb(cases)
 
-    print(f"Loaded {len(cases)} cases.")
+    if args.since:
+        cases, token = fetch_cases_since(token, args.since)
+        load_to_duckdb(cases)
+        print(f"Loaded {len(cases)} cases.")
+    elif args.date:
+        cases, token = fetch_cases_by_date(token, args.date)
+        load_to_duckdb(cases)
+        print(f"Loaded {len(cases)} cases.")
+    else:
+        current = date.fromisoformat(args.date_from)
+        end = date.fromisoformat(args.date_to)
+        while current <= end:
+            day = current.isoformat()
+            cases, token = fetch_cases_by_date(token, day)
+            load_to_duckdb(cases)
+            print(f"{day}: loaded {len(cases)} cases.")
+            current += timedelta(days=1)
+
+
+
 
 if __name__ == "__main__":
     main()
