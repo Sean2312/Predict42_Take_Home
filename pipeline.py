@@ -101,6 +101,12 @@ def clean_cases(cases):
     df["created_at"] = df["created_at"].apply(parse_created_at)
     df["last_modified"] = pd.to_datetime(df["last_modified"], format="%Y-%m-%dT%H:%M:%SZ")
     df["closed_at"] = pd.to_datetime(df["closed_at"], format="%Y-%m-%dT%H:%M:%SZ")
+
+    df["priority"] = df["priority"].replace("", None)
+    df["priority"] = pd.to_numeric(df["priority"]).astype("Int64")
+
+    df["handling_minutes"] = pd.to_numeric(df["handling_minutes"]).astype("Int64")
+
     return df
 
 def load_to_duckdb(cases):
