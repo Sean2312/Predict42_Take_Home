@@ -20,8 +20,26 @@ def get_token():
     response.raise_for_status()
     return response.json()["access_token"]
 
+def fetch_cases(token, date):
+    response = requests.get(
+        f"{API_URL}/api/cases?",
+        params={
+            "closed_on": date,
+            "offset": 0,
+            "limit": 100
+        },
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    response.raise_for_status()
+    return response.json()["items"]
+
+
 def main():
-    print(get_token())
+    token = get_token()
+    print(fetch_cases(token, "2026-07-28"))
 
 if __name__ == "__main__":
     main()
