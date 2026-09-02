@@ -74,6 +74,7 @@
 - `status` kann "Closed" oder "closed" sein, außerdem auch "Resolved"
 - `comment` kann "n/a", `null` oder leer sein + whitespace
 - `comment` kann fehlen! 
+- `deleted` kann `True` sein 
 
 
 ## Status Codes
