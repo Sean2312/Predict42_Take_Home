@@ -8,6 +8,16 @@ API_URL = "http://127.0.0.1:8080"
 CLIENT_ID = "trainee-task"
 CLIENT_SECRET = "s3cret-do-not-tell"
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--date",
+        required=True
+    )
+
+    return parser.parse_args()
+
 def get_token():
     response = requests.post(
         f"{API_URL}/oauth/token",
@@ -52,9 +62,12 @@ def load_to_duckdb(cases):
 
 
 def main():
+    args = parse_args()
     token = get_token()
-    cases = fetch_cases(token, "2026-07-28")
+    cases = fetch_cases(token, args.date)
     load_to_duckdb(cases)
+
+    print(f"Loaded {len(cases)} cases.")
 
 if __name__ == "__main__":
     main()
