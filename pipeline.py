@@ -88,15 +88,33 @@ def fetch_cases(token, date):
     return all_cases
 
 def load_to_duckdb(cases):
-    df = pd.DataFrame(cases)
+    new_df = pd.DataFrame(cases)
+    new_df = new_df.sort_values("last_modified").drop_duplicates("case_id", keep="last")
 
     con = duckdb.connect("cases.duckdb")
-    con.register("cases_df", df)
+    con.register("new_cases", new_df)
 
-    con.execute("""
-        CREATE OR REPLACE TABLE cases AS
-        SELECT * FROM cases_df
-    """)
+    table_exists = con.execute(
+        "SELECT count(*) FROM information_schema.tables WHERE table_name = 'cases'"
+    ).fetchone()[0] > 0
+
+    if not table_exists:
+        con.execute("CREATE TABLE cases AS SELECT * FROM new_cases")
+    else:
+        con.execute("""
+            DELETE FROM cases
+            WHERE EXISTS (
+                SELECT * FROM new_cases
+                WHERE new_cases.case_id = cases.case_id
+                    AND new_cases.last_modified >= cases.last_modified
+            )
+        """)
+        con.execute("""
+            INSERT INTO cases BY NAME
+            SELECT new_cases.* FROM new_cases
+            LEFT JOIN cases USING (case_id)
+            WHERE cases.case_id IS NULL
+        """)
 
     con.close()
 
