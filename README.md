@@ -24,10 +24,10 @@ python pipeline.py --since 2026-08-25
 ## Annahmen 
 - `store_no`: Besitzt führende Nullen, deshalb keine Transformation zu Integer. Hierbei würden die führenden Nullen verloren gehen und zu falscher Darstellung führen 
 - `priority`: `""` und `null` werden zu SQL-`NULL`. `0` wäre ein erfundener Prioritätswert gewesen.
-- `handling_minutes`: Werden zu einem Integer gecastet. Negative Werte werden unverändert erhalten. Wichtigs wäre, dass wir sie in den Auswertungs-Queries dann bewusst herausfiltern hätten müssen. 
+- `handling_minutes`: Werden zu einem Integer gecastet. Negative Werte werden unverändert erhalten. Wichtig wäre, dass wir sie in den Auswertungs-Queries dann bewusst herausfiltern hätten müssen. 
 - `category` wird getrimmt und normalisiert. Jede Form von z.B. `"payment "`, `"PAYMENT"`, `"Payment"` wird zu `"Payment"`. Andererseits, würde eine Gruppierung nach Kategorie in zu viele Kategorien zerfallen.
 - `created_at`: kommt in zwei Formaten vor (ISO und deutsch). Wird robust gegen beide geparst. 
-- `deleted`: Obwohl Fälle existieren, bei denen ein `True` existiert, filtern wir diese nicht ungefragt raus. Allerdings muss das ebenfalls in den Queries brücksichtigt werden. Solche Fälle dürfen keine Kennzahlen wie "Durchschnittliche Bearbeitungszeit" oder "Top-Filialen" beinflussen.
+- `deleted`: Obwohl Fälle existieren, bei denen ein `True` existiert, filtern wir diese nicht ungefragt raus. Allerdings muss das ebenfalls in den Queries berücksichtigt werden. Solche Fälle dürfen keine Kennzahlen wie "Durchschnittliche Bearbeitungszeit" oder "Top-Filialen" beeinflussen.
 - `status` und `customer.country` werden nicht normalisiert. Sie sind uneinheitlich (`"Closed"`/`"closed"`/`"Resolved"`, bzw. `"DE"`/`"de"`/`"Deutschland"`) aber auch nicht für die geforderten Queries notwendig und wurden deshalb ausgelassen um Zeit zu sparen.
 - `comment`: Unverändert übernommen. Fehlt der Key vollständig im JSON, wird daraus automatisch `NULL` beim Laden in die Tabelle.
 - Ein Datensatz pro `case_id`: Bei mehreren Versionen (unterscheidbar über `last_modified`) gewinnt der neuste Stand. Dabei deduplizieren wir in Pandas bevor wir in DuckDB schreiben, damit auch Mehrfachvorkommen innerhalb eines API-Batches sauber behandelt werden (Pagination überlappt sich um 5 Records pro Seite).
@@ -50,10 +50,10 @@ Wichtig hierbei:
 - Gelöschte Cases nicht mit einbeziehen 
 
 ### Tests
-Erst war Test für negative `handling_minutes` geplant. Später wurde allerdings bewusst entschieden, diese Werte unverändert mit aufzunehmen und später in den Queries zu berücksichtigen. 
+Erst war ein Test für negative `handling_minutes` geplant. Später wurde allerdings bewusst entschieden, diese Werte unverändert mit aufzunehmen und später in den Queries zu berücksichtigen. 
 
 1. `test_dedup_keep_latest`
-- Selbe `case_id` mit underschiedlichen `last_modified`
+- Selbe `case_id` mit unterschiedlichen `last_modified`
 - Erwartet wird genau eine Zeile mit dem neusten Stand
 2. `test_created_at_both_formats`
 - Beide Datumsformate müssen auf denselben `TIMESTAMP` abbilden
@@ -61,7 +61,7 @@ Erst war Test für negative `handling_minutes` geplant. Später wurde allerdings
 - Alle Rohvarianten müssen auf genau 4 eindeutige Werte abbilden
 
 
-# Fake Case API — Setup
+## Fake Case API — Setup
 
 ## Installieren
 
